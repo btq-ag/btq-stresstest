@@ -231,8 +231,8 @@ class StressTest:
                 address, str(amount), txid or "", status,
             ])
 
-    def run_round(self):
-        """Execute a single round of transactions."""
+    def run_round(self, interval=0):
+        """Execute a single round of transactions, spread over interval."""
         self.round_num += 1
         safety = self.config["safety"]
         sched = self.config["schedule"]
@@ -281,6 +281,8 @@ class StressTest:
                     for a in amounts
                 ]
 
+        delay = interval / len(targets) if interval > 0 else 0
+
         sent = 0
         round_total = Decimal("0")
         for i, ((peer, address, addr_type), amount) in enumerate(
@@ -308,6 +310,9 @@ class StressTest:
 
             self.log_tx_csv(ts, peer, addr_type, address, amount, txid, status)
 
+            if delay > 0 and i < len(targets) - 1 and not self.shutdown:
+                time.sleep(delay)
+
         logger.info(
             "Round #%d complete: %d/%d sent, total=%s BTQ (lifetime: %s)",
             self.round_num, sent, len(targets), round_total, self.total_spent,
@@ -323,7 +328,7 @@ class StressTest:
 
         while not self.shutdown:
             try:
-                self.run_round()
+                self.run_round(interval=interval)
             except RPCError as e:
                 logger.error("RPC error during round: %s", e)
             except Exception as e:
@@ -332,11 +337,7 @@ class StressTest:
             if self.shutdown:
                 break
 
-            logger.debug("Sleeping %ds until next round...", interval)
-            for _ in range(interval):
-                if self.shutdown:
-                    break
-                time.sleep(1)
+            time.sleep(1)
 
         logger.info(
             "Stress test stopped. Rounds: %d, Total spent: %s BTQ",
