@@ -1,0 +1,41 @@
+{
+  "node": {
+    "cli_path": "btq-cli",
+    "network": "-testnet",
+    "rpc_wallet": "",
+    "datadir": ""
+  },
+  "peers": [
+    {
+      "name": "alice",
+      "addresses": {
+        "standard": "tb1qEXAMPLE...",
+        "dilithium": "DEXAMPLE..."
+      }
+    },
+    {
+      "name": "bob",
+      "addresses": {
+        "standard": "tb1qEXAMPLE...",
+        "dilithium": "DEXAMPLE..."
+      }
+    }
+  ],
+  "schedule": {
+    "interval_seconds": 60,
+    "txs_per_round": 3,
+    "amount_min": "0.001",
+    "amount_max": "0.01",
+    "use_dilithium_pct": 50,
+    "max_spend_per_round": "0.05"
+  },
+  "safety": {
+    "min_balance": "0.1",
+    "max_total_spend": "10.0"
+  },
+  "logging": {
+    "log_file": "stresstest.log",
+    "log_level": "INFO"
+  },
+  "dry_run": false
+}
