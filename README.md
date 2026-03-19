@@ -14,11 +14,10 @@ btqd -testnet -daemon
 cp stresstest.conf.json ~/stresstest.conf.json
 # Edit cli_path, peer addresses, amounts, etc.
 
-# 3. Generate your addresses to share with other participants
+# 3. Generate your addresses to share with others
 python3 btq-stresstest.py --config ~/stresstest.conf.json --export-addresses
 
-# 4. Paste the output into other participants' peers array,
-#    and paste their addresses into yours
+# 4. Paste the output into your friends peers array, and paste their addresses into yours
 
 # 5. Test with dry-run first
 python3 btq-stresstest.py --config ~/stresstest.conf.json --dry-run --once
