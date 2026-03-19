@@ -23,7 +23,7 @@
   ],
   "schedule": {
     "interval_seconds": 60,
-    "txs_per_round": 3,
+    "txs_per_round": [20, 80],
     "amount_min": "0.001",
     "amount_max": "0.01",
     "use_dilithium_pct": 50,

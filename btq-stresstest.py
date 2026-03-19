@@ -153,7 +153,11 @@ class StressTest:
             return []
 
         sched = self.config["schedule"]
-        n = sched.get("txs_per_round", 3)
+        txs_cfg = sched.get("txs_per_round", 3)
+        if isinstance(txs_cfg, list) and len(txs_cfg) == 2:
+            n = random.randint(txs_cfg[0], txs_cfg[1])
+        else:
+            n = int(txs_cfg)
         dilithium_pct = sched.get("use_dilithium_pct", 50)
 
         targets = []
