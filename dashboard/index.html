@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BTQ Testnet Stresstest — Live Health</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --panel-2: #1a2230;
+    --text: #e8eef7;
+    --muted: #8ea0b5;
+    --ok: #2ecc71;
+    --warn: #f5a623;
+    --bad: #e74c3c;
+    --accent: #4ea1ff;
+    --accent-2: #b36bff;
+    --border: #1f2a3a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+  header { padding: 18px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: 0.2px; font-weight: 600; }
+  .status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted);
+    box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 10px rgba(46,204,113,0.6); }
+  .dot.warn { background: var(--warn); box-shadow: 0 0 10px rgba(245,166,35,0.6); }
+  .dot.bad { background: var(--bad); box-shadow: 0 0 10px rgba(231,76,60,0.6); }
+  main { padding: 18px 24px 48px; max-width: 1400px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; margin-bottom: 18px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; }
+  .card .label { color: var(--muted); font-size: 11px; letter-spacing: 0.5px;
+    text-transform: uppercase; }
+  .card .value { font-size: 22px; font-weight: 600; margin-top: 4px; }
+  .card .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .value.good { color: var(--ok); }
+  .value.warn { color: var(--warn); }
+  .value.bad  { color: var(--bad); }
+  section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 14px; }
+  section h2 { margin: 0 0 8px; font-size: 13px; letter-spacing: 0.4px;
+    text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap.tall { height: 280px; }
+  .row { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 960px) { .row.two { grid-template-columns: 1fr 1fr; } }
+  footer { color: var(--muted); font-size: 12px; padding: 16px 24px 32px; text-align: center; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>BTQ Testnet Stresstest</h1>
+  <div class="status" id="status"><span class="dot" id="dot"></span><span id="status-text">loading…</span></div>
+  <div class="status" id="updated" style="margin-left:auto">updated: —</div>
+</header>
+
+<main>
+  <div class="grid">
+    <div class="card"><div class="label">Chain height</div><div class="value" id="c-height">—</div><div class="sub" id="c-height-sub">—</div></div>
+    <div class="card"><div class="label">Peers</div><div class="value" id="c-peers">—</div></div>
+    <div class="card"><div class="label">Success rate (5m)</div><div class="value" id="c-rate">—</div><div class="sub" id="c-rate-sub">—</div></div>
+    <div class="card"><div class="label">Mempool</div><div class="value" id="c-mp">—</div><div class="sub" id="c-mp-sub">—</div></div>
+    <div class="card"><div class="label">Confirmed on-chain</div><div class="value" id="c-conf">—</div><div class="sub" id="c-conf-sub">—</div></div>
+    <div class="card"><div class="label">Confirm latency p50</div><div class="value" id="c-p50">—</div><div class="sub" id="c-p50-sub">p90/p99</div></div>
+    <div class="card"><div class="label">Still pending</div><div class="value" id="c-pend">—</div></div>
+    <div class="card"><div class="label">Dropped</div><div class="value" id="c-miss">—</div></div>
+  </div>
+
+  <section>
+    <h2>Chain height</h2>
+    <div class="chart-wrap"><canvas id="chart-height"></canvas></div>
+  </section>
+
+  <section>
+    <h2>Success rate (5-min windows)</h2>
+    <div class="chart-wrap"><canvas id="chart-rate"></canvas></div>
+  </section>
+
+  <section>
+    <h2>Attempts &amp; outcomes per 5-min window</h2>
+    <div class="chart-wrap tall"><canvas id="chart-att"></canvas></div>
+  </section>
+
+  <div class="row two">
+    <section>
+      <h2>Mempool size</h2>
+      <div class="chart-wrap"><canvas id="chart-mp"></canvas></div>
+    </section>
+    <section>
+      <h2>UTXOs (≥1 conf)</h2>
+      <div class="chart-wrap"><canvas id="chart-utxo"></canvas></div>
+    </section>
+  </div>
+
+  <section>
+    <h2>map::at RPC errors per 5-min window</h2>
+    <div class="chart-wrap"><canvas id="chart-err"></canvas></div>
+  </section>
+
+  <section>
+    <h2>Confirmation latency distribution (last 24h)</h2>
+    <div class="chart-wrap"><canvas id="chart-lat"></canvas></div>
+  </section>
+</main>
+
+<footer>
+  Auto-refreshes every 60&nbsp;s. Source: stresstest VM <code>btq-testnet-stresstest</code> (asia-east1-a).
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script>
+Chart.defaults.color = '#8ea0b5';
+Chart.defaults.borderColor = '#1f2a3a';
+Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif';
+
+const CHARTS = {};
+function makeLine(id, datasets, opts = {}) {
+  const ctx = document.getElementById(id).getContext('2d');
+  CHARTS[id] = new Chart(ctx, {
+    type: 'line',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: datasets.length > 1, position: 'top', labels: { boxWidth: 12 } } },
+      scales: {
+        x: { type: 'time', time: { tooltipFormat: 'MMM d HH:mm', displayFormats: { hour: 'HH:mm', minute: 'HH:mm' } },
+          grid: { color: '#1a2230' } },
+        y: { beginAtZero: opts.beginAtZero ?? false, grid: { color: '#1a2230' },
+             min: opts.min, max: opts.max, ticks: opts.ticks }
+      }
+    }
+  });
+}
+
+function makeBar(id, labels, data, color) {
+  const ctx = document.getElementById(id).getContext('2d');
+  CHARTS[id] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: color, borderRadius: 3 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: '#1a2230' }, ticks: { maxRotation: 0 } },
+        y: { beginAtZero: true, grid: { color: '#1a2230' } }
+      }
+    }
+  });
+}
+
+function fmt(n, d=0) {
+  if (n == null) return '—';
+  if (typeof n !== 'number') return String(n);
+  return n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
+}
+function fmtDur(s) {
+  if (s == null) return '—';
+  if (s < 90) return `${Math.round(s)}s`;
+  if (s < 5400) return `${(s/60).toFixed(1)} min`;
+  return `${(s/3600).toFixed(1)} h`;
+}
+function since(ts) {
+  const d = (Date.now() - new Date(ts).getTime()) / 1000;
+  if (d < 60) return `${Math.round(d)}s ago`;
+  if (d < 3600) return `${Math.round(d/60)} min ago`;
+  return `${(d/3600).toFixed(1)} h ago`;
+}
+
+function setStatus(label, cls) {
+  document.getElementById('dot').className = 'dot ' + cls;
+  document.getElementById('status-text').textContent = label;
+}
+
+function update(chartId, datasets) {
+  const c = CHARTS[chartId];
+  if (!c) return;
+  c.data.datasets = datasets;
+  c.update('none');
+}
+
+async function refresh() {
+  try {
+    const r = await fetch('data.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    render(d);
+  } catch (e) {
+    setStatus('connection error', 'bad');
+    console.error(e);
+  }
+}
+
+function render(d) {
+  const ticks = d.ticks || [];
+  const last = ticks[ticks.length - 1] || {};
+  const latestTs = d.generated_at;
+
+  document.getElementById('updated').textContent =
+    'updated: ' + since(latestTs) + ' · tick: ' + (last.ts ? since(last.ts) : '—');
+
+  // Status indicator
+  const tickAgeMin = last.ts ? (Date.now() - new Date(last.ts).getTime()) / 60000 : 999;
+  const rate = last.success_rate_5m;
+  const alerts = last.alerts || [];
+  if (tickAgeMin > 15) setStatus('stale — no ticks in ' + Math.round(tickAgeMin) + ' min', 'bad');
+  else if (rate != null && rate < 0.3) setStatus('success rate degraded', 'bad');
+  else if (alerts.length > 0) setStatus('alert: ' + alerts.join(', '), 'warn');
+  else setStatus('healthy', 'ok');
+
+  // Top cards
+  document.getElementById('c-height').textContent = fmt(last.height);
+  document.getElementById('c-height-sub').textContent = last.last_block_age_sec != null
+    ? `tip ${fmtDur(last.last_block_age_sec)} old` : '—';
+  document.getElementById('c-peers').textContent = last.peers ?? '—';
+  document.getElementById('c-rate').textContent = rate != null ? (rate * 100).toFixed(1) + '%' : '—';
+  const rateEl = document.getElementById('c-rate');
+  rateEl.classList.remove('good','warn','bad');
+  if (rate == null) {}
+  else if (rate >= 0.95) rateEl.classList.add('good');
+  else if (rate >= 0.3) rateEl.classList.add('warn');
+  else rateEl.classList.add('bad');
+  document.getElementById('c-rate-sub').textContent =
+    `${(last.success_dil_5m ?? 0) + (last.success_std_5m ?? 0)} ok / ${last.attempts_5m ?? 0} attempts`;
+  document.getElementById('c-mp').textContent = fmt(last.mempool_size);
+  document.getElementById('c-mp-sub').textContent = last.mempool_bytes != null
+    ? (last.mempool_bytes / 1024).toFixed(1) + ' KB' : '';
+
+  // Sweep cards
+  const sweep = d.sweep || {};
+  document.getElementById('c-conf').textContent =
+    sweep.confirmed != null ? sweep.confirmed.toLocaleString() : '—';
+  document.getElementById('c-conf-sub').textContent =
+    sweep.total ? `${(sweep.confirmed / sweep.total * 100).toFixed(2)}% of ${sweep.total.toLocaleString()}` : '';
+  document.getElementById('c-p50').textContent = fmtDur(sweep.latency_p50);
+  document.getElementById('c-p50-sub').textContent =
+    `p90 ${fmtDur(sweep.latency_p90)} · p99 ${fmtDur(sweep.latency_p99)}`;
+  document.getElementById('c-pend').textContent = fmt(sweep.pending);
+  document.getElementById('c-miss').textContent = fmt(sweep.missing);
+  const missEl = document.getElementById('c-miss');
+  missEl.classList.remove('good','warn','bad');
+  if (sweep.missing == null) {}
+  else if (sweep.missing === 0) missEl.classList.add('good');
+  else if (sweep.missing < 5) missEl.classList.add('warn');
+  else missEl.classList.add('bad');
+
+  // Chart datasets
+  const series = (key, color, label) => ({
+    label, data: ticks.map(t => ({ x: t.ts, y: t[key] })),
+    borderColor: color, backgroundColor: color + '33',
+    borderWidth: 1.5, pointRadius: 0, tension: 0.2
+  });
+
+  update('chart-height', [series('height', '#4ea1ff', 'height')]);
+  update('chart-rate',   [series('success_rate_5m', '#2ecc71', 'success rate')]);
+  update('chart-att', [
+    series('attempts_5m',     '#8ea0b5', 'attempts'),
+    series('success_dil_5m',  '#b36bff', 'dilithium ok'),
+    series('success_std_5m',  '#4ea1ff', 'standard ok'),
+    series('failed_5m',       '#e74c3c', 'failed'),
+  ]);
+  update('chart-mp',   [series('mempool_size', '#f5a623', 'mempool')]);
+  update('chart-utxo', [series('utxos_1conf', '#b08968', 'utxos')]);
+  update('chart-err',  [series('err_map_at', '#e74c3c', 'map::at / 5m')]);
+
+  // Latency histogram
+  if (d.sweep && d.sweep.latency_hist) {
+    const h = d.sweep.latency_hist;
+    if (CHARTS['chart-lat']) CHARTS['chart-lat'].destroy();
+    makeBar('chart-lat', h.labels, h.counts, '#4ea1ff');
+  }
+}
+
+// Init empty charts
+makeLine('chart-height', [], {});
+makeLine('chart-rate',   [], { min: 0, max: 1.05 });
+makeLine('chart-att',    [], { beginAtZero: true });
+makeLine('chart-mp',     [], { beginAtZero: true });
+makeLine('chart-utxo',   [], { beginAtZero: true });
+makeLine('chart-err',    [], { beginAtZero: true });
+makeBar('chart-lat', [], [], '#4ea1ff');
+
+refresh();
+setInterval(refresh, 60000);
+</script>
+</body>
+</html>
