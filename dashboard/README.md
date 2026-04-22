@@ -2,7 +2,7 @@
 
 Team-visible live view of stresstest health and on-chain confirmation stats.
 
-- **URL:** https://storage.googleapis.com/btq-testnet-stresstest-dashboard/index.html
+- **URL:** https://storage.cloud.google.com/btq-testnet-stresstest-dashboard/index.html
 - **Access:** any `btq.tech` Google Workspace account (sign in required).
 - **Refresh:** page polls `data.json` every 60 s; updater runs every 5 min.
 
