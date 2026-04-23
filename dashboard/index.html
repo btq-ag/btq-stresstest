@@ -23,6 +23,49 @@
     font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
   header { padding: 18px 24px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .horizon { display: inline-flex; gap: 2px; background: var(--panel-2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
+  .horizon button { background: transparent; border: 0; color: var(--muted);
+    padding: 5px 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
+    cursor: pointer; border-radius: 6px; font-family: inherit; }
+  .horizon button:hover { color: var(--text); }
+  .horizon button.active { background: var(--accent); color: #05121f; }
+
+  .help-btn {
+    position: absolute; top: 10px; right: 10px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border);
+    font-size: 10px; font-weight: 700; cursor: pointer;
+    font-family: inherit; line-height: 15px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .help-btn:hover { color: var(--text); border-color: var(--accent); }
+  .card, section { position: relative; }
+  .help-popover {
+    display: none;
+    position: absolute; top: 32px; right: 8px;
+    width: min(280px, calc(100vw - 48px)); z-index: 20;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+    font-size: 12px; line-height: 1.55;
+    color: var(--muted);
+  }
+  .help-popover strong { display: block; color: var(--text); margin-bottom: 6px; font-size: 12px; letter-spacing: 0.3px; }
+  .help-popover p { margin: 0 0 6px; }
+  .help-popover p:last-child { margin-bottom: 0; }
+  .help-popover code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 11px; color: var(--text); }
+  .help-open > .help-popover { display: block; }
+
+  .scope {
+    display: inline-block; margin-left: 6px; padding: 1px 6px;
+    font-size: 9px; font-weight: 700; letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+    color: var(--muted); vertical-align: 1px;
+  }
+  .scope.now { border-color: rgba(78,161,255,0.35); color: var(--accent); }
   header h1 { margin: 0; font-size: 18px; letter-spacing: 0.2px; font-weight: 600; }
   .status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted);
@@ -59,62 +102,233 @@
 <header>
   <h1>BTQ Testnet Stresstest</h1>
   <div class="status" id="status"><span class="dot" id="dot"></span><span id="status-text">loading…</span></div>
+  <div class="horizon" id="horizon" role="tablist" aria-label="time horizon">
+    <button type="button" data-h="60">1h</button>
+    <button type="button" data-h="360">6h</button>
+    <button type="button" data-h="720">12h</button>
+    <button type="button" data-h="1440" class="active">24h</button>
+    <button type="button" data-h="4320">3d</button>
+    <button type="button" data-h="10080">7d</button>
+    <button type="button" data-h="0">All</button>
+  </div>
   <div class="status" id="updated" style="margin-left:auto">updated: —</div>
 </header>
 
 <main>
   <div class="grid">
-    <div class="card"><div class="label">Chain height</div><div class="value" id="c-height">—</div><div class="sub" id="c-height-sub">—</div></div>
-    <div class="card"><div class="label">Peers</div><div class="value" id="c-peers">—</div></div>
-    <div class="card"><div class="label">Success rate (5m)</div><div class="value" id="c-rate">—</div><div class="sub" id="c-rate-sub">—</div></div>
-    <div class="card"><div class="label">Mempool</div><div class="value" id="c-mp">—</div><div class="sub" id="c-mp-sub">—</div></div>
-    <div class="card"><div class="label">Confirmed on-chain</div><div class="value" id="c-conf">—</div><div class="sub" id="c-conf-sub">—</div></div>
-    <div class="card"><div class="label">Confirm latency p50</div><div class="value" id="c-p50">—</div><div class="sub" id="c-p50-sub">p90/p99</div></div>
-    <div class="card"><div class="label">Still pending</div><div class="value" id="c-pend">—</div></div>
-    <div class="card"><div class="label">Dropped</div><div class="value" id="c-miss">—</div></div>
+    <div class="card">
+      <button class="help-btn" aria-label="About chain height">?</button>
+      <div class="label">Chain height<span class="scope now">now</span></div>
+      <div class="value" id="c-height">—</div>
+      <div class="sub" id="c-height-sub">—</div>
+      <div class="help-popover" role="tooltip">
+        <strong>Chain height</strong>
+        <p>Current BTQ testnet block count at the most recent 5-min health tick.</p>
+        <p>Source: <code>btq-cli getblockcount</code> on the stresstest VM.</p>
+        <p>Subtitle "tip X min old" = seconds since the last block was mined; on a healthy testnet this sits around 60&nbsp;s.</p>
+      </div>
+    </div>
+    <div class="card">
+      <button class="help-btn" aria-label="About peers">?</button>
+      <div class="label">Peers<span class="scope now">now</span></div>
+      <div class="value" id="c-peers">—</div>
+      <div class="help-popover" role="tooltip">
+        <strong>Peers</strong>
+        <p>Number of remote nodes the local <code>btqd</code> is connected to.</p>
+        <p>Source: <code>getnetworkinfo.connections</code> at the most recent health tick.</p>
+      </div>
+    </div>
+    <div class="card">
+      <button class="help-btn" aria-label="About success rate">?</button>
+      <div class="label">Success rate<span class="scope" id="scope-rate">—</span></div>
+      <div class="value" id="c-rate">—</div>
+      <div class="sub" id="c-rate-sub">—</div>
+      <div class="help-popover" role="tooltip">
+        <strong>Success rate (horizon-scoped)</strong>
+        <p>Attempts-weighted average acceptance rate across every 5-min tick in the selected horizon:</p>
+        <p><code>sum(success_dil + success_std) ÷ sum(attempts)</code>, summed over ticks in window.</p>
+        <p>Source: the stresstest CSV log. Each row's <code>status</code> is <em>success</em> if <code>sendtoaddress</code> returned a txid, or <em>failed</em> if it raised an RPC error.</p>
+        <p><strong>Note:</strong> this measures mempool acceptance only — not on-chain confirmation. See the "Confirmed on-chain" card for that.</p>
+      </div>
+    </div>
+    <div class="card">
+      <button class="help-btn" aria-label="About mempool">?</button>
+      <div class="label">Mempool avg<span class="scope" id="scope-mp">—</span></div>
+      <div class="value" id="c-mp">—</div>
+      <div class="sub" id="c-mp-sub">—</div>
+      <div class="help-popover" role="tooltip">
+        <strong>Mempool average (horizon-scoped)</strong>
+        <p>Primary value = <em>mean</em> tx count in the local node's mempool across all 5-min health ticks in the selected horizon.</p>
+        <p>Subtitle "now X · peak Y" — the most recent snapshot (from the latest tick) and the highest value observed in the window.</p>
+        <p>Source: <code>getmempoolinfo.size</code> at each health tick (sampled every 5 min).</p>
+        <p>Bounded fluctuation = healthy. Rising window averages over time = blocks falling behind submissions.</p>
+      </div>
+    </div>
+    <div class="card">
+      <button class="help-btn" aria-label="About confirmed on-chain">?</button>
+      <div class="label">Confirmed on-chain<span class="scope" id="scope-conf">—</span></div>
+      <div class="value" id="c-conf">—</div>
+      <div class="sub" id="c-conf-sub">—</div>
+      <div class="help-popover" role="tooltip">
+        <strong>Confirmed on-chain</strong>
+        <p>Within the <em>selected time horizon</em>, count of successfully submitted txs that are now included in a block.</p>
+        <p>How: every 5&nbsp;min a sweep scans recent blocks (up to ~3000 back from tip) and intersects their tx lists against every success txid in the stresstest CSV log. Results are bucketed by submission time so the dashboard can scope them to any horizon.</p>
+        <p>Percent is against <em>confirmed + pending + dropped</em> for the window.</p>
+      </div>
+    </div>
+    <div class="card">
+      <button class="help-btn" aria-label="About confirm latency p50">?</button>
+      <div class="label">Confirm latency p50<span class="scope" id="scope-p50">—</span></div>
+      <div class="value" id="c-p50">—</div>
+      <div class="sub" id="c-p50-sub">p90/p99</div>
+      <div class="help-popover" role="tooltip">
+        <strong>Confirm latency p50</strong>
+        <p>Approximate median time between stresstest submission (<code>timestamp</code> in the CSV) and the mined block's timestamp (<code>block.time</code>), for confirmed txs in the selected horizon.</p>
+        <p>How: per-5-min-bucket log-spaced histogram with 9 bins (&lt;30&nbsp;s, 30–60&nbsp;s, 1–2&nbsp;min, 2–5&nbsp;min, 5–10&nbsp;min, 10–30&nbsp;min, 30–60&nbsp;min, 1–3&nbsp;h, &gt;3&nbsp;h). The client merges buckets inside the horizon and interpolates linearly within the bin containing the percentile.</p>
+        <p><strong>Accuracy:</strong> expect ±10–20&nbsp;s at short latencies. p90 and p99 are shown in the subtitle.</p>
+      </div>
+    </div>
+    <div class="card">
+      <button class="help-btn" aria-label="About still pending">?</button>
+      <div class="label">Still pending<span class="scope" id="scope-pend">—</span></div>
+      <div class="value" id="c-pend">—</div>
+      <div class="help-popover" role="tooltip">
+        <strong>Still pending</strong>
+        <p>Successful submissions in the horizon that are currently in the mempool, not yet mined.</p>
+        <p>How: during the 5-min sweep, <code>getmempoolentry &lt;txid&gt;</code> is called for each submission; membership counts here.</p>
+        <p>Fresh txs are usually pending for one or two blocks before confirming — a small non-zero value is normal.</p>
+      </div>
+    </div>
+    <div class="card">
+      <button class="help-btn" aria-label="About dropped">?</button>
+      <div class="label">Dropped<span class="scope" id="scope-miss">—</span></div>
+      <div class="value" id="c-miss">—</div>
+      <div class="help-popover" role="tooltip">
+        <strong>Dropped</strong>
+        <p>Successful submissions in the horizon that are neither in any observed block nor in the current mempool.</p>
+        <p>How: during the sweep, if a txid isn't in any scanned block and isn't in <code>getrawmempool</code>, it's classified as dropped.</p>
+        <p><strong>Zero is the healthy state.</strong> Non-zero can indicate mempool eviction (fee too low), RBF replacement, or — rarely — a chain reorg that unconfirmed the tx.</p>
+      </div>
+    </div>
   </div>
 
   <section>
+    <button class="help-btn" aria-label="About chain height chart">?</button>
     <h2>Chain height</h2>
     <div class="chart-wrap"><canvas id="chart-height"></canvas></div>
+    <div class="help-popover" role="tooltip">
+      <strong>Chain height over time</strong>
+      <p>Block count at each 5-min health tick, filtered to the selected horizon.</p>
+      <p>A smooth upward line at ~1 block/min is healthy. Flat stretches indicate tip stalls.</p>
+    </div>
   </section>
 
   <section>
+    <button class="help-btn" aria-label="About success rate chart">?</button>
     <h2>Success rate (5-min windows)</h2>
     <div class="chart-wrap"><canvas id="chart-rate"></canvas></div>
+    <div class="help-popover" role="tooltip">
+      <strong>Success rate per 5-min window</strong>
+      <p>Fraction of stresstest submissions accepted into the mempool, computed per 5-min window from the stresstest CSV (<code>success / (success + failed)</code>).</p>
+      <p>Dashed red guide at 0.3 — the alert threshold.</p>
+      <p>This is mempool-acceptance only; chain confirmation is tracked separately in the Confirmed card.</p>
+    </div>
   </section>
 
   <section>
+    <button class="help-btn" aria-label="About attempts chart">?</button>
     <h2>Attempts &amp; outcomes per 5-min window</h2>
     <div class="chart-wrap tall"><canvas id="chart-att"></canvas></div>
+    <div class="help-popover" role="tooltip">
+      <strong>Per-window attempts and outcomes</strong>
+      <p>Counts from the stresstest CSV per 5-min window:</p>
+      <p>• <strong>attempts</strong> (gray, dotted): total submissions tried<br>
+         • <strong>dilithium ok</strong> (purple): accepted Dilithium txs<br>
+         • <strong>standard ok</strong> (blue): accepted standard txs<br>
+         • <strong>failed</strong> (red): submissions that raised an RPC error</p>
+    </div>
+  </section>
+
+  <section>
+    <button class="help-btn" aria-label="About throughput chart">?</button>
+    <h2>Submission throughput (tx/s)</h2>
+    <div class="chart-wrap"><canvas id="chart-tps"></canvas></div>
+    <div class="help-popover" role="tooltip">
+      <strong>Submission throughput</strong>
+      <p>Transactions submitted per second, averaged over each 5-min window: <code>attempts_5m ÷ 300</code>.</p>
+      <p>Useful for load-test experiments where you've changed the stresstest rate and want to confirm the new submission rate is sustained.</p>
+      <p>Does not reflect on-chain confirmation throughput — only what's being submitted to the wallet.</p>
+    </div>
+  </section>
+
+  <section>
+    <button class="help-btn" aria-label="About failure breakdown chart">?</button>
+    <h2>Failure breakdown per 5-min window</h2>
+    <div class="chart-wrap"><canvas id="chart-fail"></canvas></div>
+    <div class="help-popover" role="tooltip">
+      <strong>Failure breakdown</strong>
+      <p>Failed submissions per 5-min window, split by cause. All counts come from grep-scanning the stresstest log during the 5-min health tick.</p>
+      <p>• <strong>map::at</strong> (red): the v0.3.2 <code>sendtoaddress</code> bug — RPC errors with code -1.<br>
+         • <strong>insufficient funds</strong> (orange): wallet balance wasn't enough for the random amount selected.<br>
+         • <strong>no confirmed UTXOs</strong> (yellow): no ≥1-conf outputs available to spend.<br>
+         • <strong>other RPC</strong> (gray): any other RPC error.</p>
+      <p>Under load, comparing these lines tells you <em>why</em> the success rate dropped — wallet bug vs. balance issue vs. UTXO starvation vs. something else.</p>
+    </div>
   </section>
 
   <div class="row two">
     <section>
+      <button class="help-btn" aria-label="About mempool chart">?</button>
       <h2>Mempool size</h2>
       <div class="chart-wrap"><canvas id="chart-mp"></canvas></div>
+      <div class="help-popover" role="tooltip">
+        <strong>Mempool size over time</strong>
+        <p>Tx count in the local node's mempool at each health tick, from <code>getmempoolinfo.size</code>.</p>
+        <p>Bounded fluctuation = healthy. Monotonic rise = blocks can't keep up with submissions.</p>
+      </div>
     </section>
     <section>
+      <button class="help-btn" aria-label="About UTXOs chart">?</button>
       <h2>UTXOs (≥1 conf)</h2>
       <div class="chart-wrap"><canvas id="chart-utxo"></canvas></div>
+      <div class="help-popover" role="tooltip">
+        <strong>Confirmed UTXOs over time</strong>
+        <p>Count of unspent outputs with at least 1 confirmation in the stresstest wallet, from <code>listunspent 1</code>.</p>
+        <p>Balloons when sends fail (change outputs pile up); drains as the wallet respends them.</p>
+      </div>
     </section>
   </div>
 
   <section>
-    <h2>map::at RPC errors per 5-min window</h2>
-    <div class="chart-wrap"><canvas id="chart-err"></canvas></div>
+    <button class="help-btn" aria-label="About block weight chart">?</button>
+    <h2>Block weight (MWU) per mined block</h2>
+    <div class="chart-wrap"><canvas id="chart-bw"></canvas></div>
+    <div class="help-popover" role="tooltip">
+      <strong>Block weight utilization</strong>
+      <p>Total weight of each mined block (megaweight units, MWU) over time, plotted by the block's own <code>blocktime</code>.</p>
+      <p>Source: <code>getblock &lt;hash&gt; 1</code> (<code>.weight</code>), falling back to <code>getblockstats</code> for nodes that don't return weight in <code>getblock</code>.</p>
+      <p>If this chart saturates at a flat ceiling (and mempool grows at the same time), blocks are weight-capped and the chain is the bottleneck. On BTQ testnet we've observed blocks up to ~5.7 MWU.</p>
+    </div>
   </section>
 
   <section>
-    <h2>Confirmation latency distribution (last 24h)</h2>
+    <button class="help-btn" aria-label="About latency histogram">?</button>
+    <h2 id="lat-title">Confirmation latency distribution</h2>
     <div class="chart-wrap"><canvas id="chart-lat"></canvas></div>
+    <div class="help-popover" role="tooltip">
+      <strong>Confirmation latency distribution</strong>
+      <p>Histogram of confirmation delays (submit time → block time) for confirmed txs in the selected horizon.</p>
+      <p>Bins: &lt;30&nbsp;s, 30–60&nbsp;s, 1–2&nbsp;min, 2–5&nbsp;min, 5–10&nbsp;min, 10–30&nbsp;min, 30–60&nbsp;min, 1–3&nbsp;h, &gt;3&nbsp;h.</p>
+      <p>On a healthy testnet most txs land in the first two bins (one block). A heavy tail would indicate congestion or chain stalls during the window.</p>
+    </div>
   </section>
 </main>
 
 <footer>
-  Auto-refreshes every 60&nbsp;s. Source: stresstest VM <code>btq-testnet-stresstest</code> (asia-east1-a).
+  Page reloads every 60&nbsp;s; underlying data is regenerated every 5&nbsp;min. Source: stresstest VM <code>btq-testnet-stresstest</code> (asia-east1-a).
 </footer>
 
+<script id="app-data" type="application/json">__DATA__</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <script>
@@ -189,28 +403,71 @@ function update(chartId, datasets) {
   c.update('none');
 }
 
-async function refresh() {
+function loadEmbedded() {
   try {
-    const r = await fetch('data.json?t=' + Date.now(), { cache: 'no-store' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const d = await r.json();
-    render(d);
+    const el = document.getElementById('app-data');
+    if (!el || !el.textContent.trim()) throw new Error('no embedded data');
+    return JSON.parse(el.textContent);
   } catch (e) {
-    setStatus('connection error', 'bad');
+    setStatus('no data', 'bad');
     console.error(e);
+    return null;
   }
 }
 
-function render(d) {
-  const ticks = d.ticks || [];
-  const last = ticks[ticks.length - 1] || {};
-  const latestTs = d.generated_at;
+// Lat-histogram bin upper boundaries (aligned with LAT_BINS in update_dashboard.py)
+const LAT_BIN_HI = [30, 60, 120, 300, 600, 1800, 3600, 10800, 36000];
 
+// Estimate a percentile from a merged histogram by linear interpolation
+// within the bin that straddles the cumulative cutoff.
+function percentileFromHist(counts, p) {
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (!total) return null;
+  const target = total * p;
+  let cum = 0;
+  for (let i = 0; i < counts.length; i++) {
+    const next = cum + counts[i];
+    if (next >= target) {
+      const lo = i === 0 ? 0 : LAT_BIN_HI[i - 1];
+      const hi = LAT_BIN_HI[i];
+      const frac = counts[i] > 0 ? (target - cum) / counts[i] : 0;
+      return lo + frac * (hi - lo);
+    }
+    cum = next;
+  }
+  return null;
+}
+
+function render(d, horizonMin) {
+  const allTicks = d.ticks || [];
+  const allBuckets = (d.sweep && d.sweep.buckets) || [];
+  const latestTs = d.generated_at;
+  const nowMs = Date.now();
+  // horizonMin === 0 means "All" — no lower bound.
+  const cutoffMs = horizonMin > 0 ? nowMs - horizonMin * 60000 : -Infinity;
+
+  // Filter to horizon
+  const ticks = allTicks.filter(t => t.ts && new Date(t.ts).getTime() >= cutoffMs);
+  const buckets = allBuckets.filter(b => b.ts * 1000 >= cutoffMs);
+
+  // Merge bucket aggregates
+  let conf = 0, pend = 0, miss = 0;
+  const hist = new Array(LAT_BIN_HI.length).fill(0);
+  for (const b of buckets) {
+    conf += b.conf || 0; pend += b.pend || 0; miss += b.miss || 0;
+    if (b.lat_hist) for (let i = 0; i < hist.length; i++) hist[i] += b.lat_hist[i] || 0;
+  }
+  const total = conf + pend + miss;
+  const p50 = percentileFromHist(hist, 0.50);
+  const p90 = percentileFromHist(hist, 0.90);
+  const p99 = percentileFromHist(hist, 0.99);
+
+  const last = allTicks[allTicks.length - 1] || {};
   document.getElementById('updated').textContent =
     'updated: ' + since(latestTs) + ' · tick: ' + (last.ts ? since(last.ts) : '—');
 
-  // Status indicator
-  const tickAgeMin = last.ts ? (Date.now() - new Date(last.ts).getTime()) / 60000 : 999;
+  // Status indicator (always reflects latest tick, not horizon)
+  const tickAgeMin = last.ts ? (nowMs - new Date(last.ts).getTime()) / 60000 : 999;
   const rate = last.success_rate_5m;
   const alerts = last.alerts || [];
   if (tickAgeMin > 15) setStatus('stale — no ticks in ' + Math.round(tickAgeMin) + ' min', 'bad');
@@ -218,40 +475,52 @@ function render(d) {
   else if (alerts.length > 0) setStatus('alert: ' + alerts.join(', '), 'warn');
   else setStatus('healthy', 'ok');
 
-  // Top cards
+  // "now" cards — snapshot at latest tick regardless of horizon
   document.getElementById('c-height').textContent = fmt(last.height);
   document.getElementById('c-height-sub').textContent = last.last_block_age_sec != null
     ? `tip ${fmtDur(last.last_block_age_sec)} old` : '—';
   document.getElementById('c-peers').textContent = last.peers ?? '—';
-  document.getElementById('c-rate').textContent = rate != null ? (rate * 100).toFixed(1) + '%' : '—';
+
+  // Horizon-scoped success rate — attempts-weighted average across the window
+  let totOk = 0, totAtt = 0;
+  for (const t of ticks) {
+    totOk  += (t.success_dil_5m || 0) + (t.success_std_5m || 0);
+    totAtt += (t.attempts_5m || 0);
+  }
+  const winRate = totAtt > 0 ? totOk / totAtt : null;
+  document.getElementById('c-rate').textContent =
+    winRate != null ? (winRate * 100).toFixed(1) + '%' : '—';
   const rateEl = document.getElementById('c-rate');
   rateEl.classList.remove('good','warn','bad');
-  if (rate == null) {}
-  else if (rate >= 0.95) rateEl.classList.add('good');
-  else if (rate >= 0.3) rateEl.classList.add('warn');
+  if (winRate == null) {}
+  else if (winRate >= 0.95) rateEl.classList.add('good');
+  else if (winRate >= 0.30) rateEl.classList.add('warn');
   else rateEl.classList.add('bad');
   document.getElementById('c-rate-sub').textContent =
-    `${(last.success_dil_5m ?? 0) + (last.success_std_5m ?? 0)} ok / ${last.attempts_5m ?? 0} attempts`;
-  document.getElementById('c-mp').textContent = fmt(last.mempool_size);
-  document.getElementById('c-mp-sub').textContent = last.mempool_bytes != null
-    ? (last.mempool_bytes / 1024).toFixed(1) + ' KB' : '';
+    totAtt > 0 ? `${totOk.toLocaleString()} ok / ${totAtt.toLocaleString()} attempts` : 'no attempts in window';
 
-  // Sweep cards
-  const sweep = d.sweep || {};
-  document.getElementById('c-conf').textContent =
-    sweep.confirmed != null ? sweep.confirmed.toLocaleString() : '—';
+  // Horizon-scoped mempool — avg across window ticks; "now" and "peak" in subtitle
+  const mpVals = ticks.map(t => t.mempool_size).filter(v => typeof v === 'number');
+  const mpAvg  = mpVals.length ? mpVals.reduce((a,b) => a + b, 0) / mpVals.length : null;
+  const mpPeak = mpVals.length ? Math.max(...mpVals) : null;
+  const mpNow  = last.mempool_size;
+  document.getElementById('c-mp').textContent = mpAvg != null ? fmt(mpAvg, mpAvg < 10 ? 1 : 0) : '—';
+  document.getElementById('c-mp-sub').textContent =
+    mpVals.length ? `now ${fmt(mpNow)} · peak ${fmt(mpPeak)}` : 'no data';
+
+  // Sweep cards — horizon-scoped from merged buckets
+  document.getElementById('c-conf').textContent = conf.toLocaleString();
   document.getElementById('c-conf-sub').textContent =
-    sweep.total ? `${(sweep.confirmed / sweep.total * 100).toFixed(2)}% of ${sweep.total.toLocaleString()}` : '';
-  document.getElementById('c-p50').textContent = fmtDur(sweep.latency_p50);
+    total > 0 ? `${(conf / total * 100).toFixed(2)}% of ${total.toLocaleString()}` : 'no txs in window';
+  document.getElementById('c-p50').textContent = fmtDur(p50);
   document.getElementById('c-p50-sub').textContent =
-    `p90 ${fmtDur(sweep.latency_p90)} · p99 ${fmtDur(sweep.latency_p99)}`;
-  document.getElementById('c-pend').textContent = fmt(sweep.pending);
-  document.getElementById('c-miss').textContent = fmt(sweep.missing);
+    `p90 ${fmtDur(p90)} · p99 ${fmtDur(p99)}`;
+  document.getElementById('c-pend').textContent = fmt(pend);
+  document.getElementById('c-miss').textContent = fmt(miss);
   const missEl = document.getElementById('c-miss');
   missEl.classList.remove('good','warn','bad');
-  if (sweep.missing == null) {}
-  else if (sweep.missing === 0) missEl.classList.add('good');
-  else if (sweep.missing < 5) missEl.classList.add('warn');
+  if (miss === 0) missEl.classList.add('good');
+  else if (miss < 5) missEl.classList.add('warn');
   else missEl.classList.add('bad');
 
   // Chart datasets
@@ -260,7 +529,6 @@ function render(d) {
     borderColor: color, backgroundColor: color + '33',
     borderWidth: 1.5, pointRadius: 0, tension: 0.2
   });
-
   update('chart-height', [series('height', '#4ea1ff', 'height')]);
   update('chart-rate',   [series('success_rate_5m', '#2ecc71', 'success rate')]);
   update('chart-att', [
@@ -271,27 +539,121 @@ function render(d) {
   ]);
   update('chart-mp',   [series('mempool_size', '#f5a623', 'mempool')]);
   update('chart-utxo', [series('utxos_1conf', '#b08968', 'utxos')]);
-  update('chart-err',  [series('err_map_at', '#e74c3c', 'map::at / 5m')]);
 
-  // Latency histogram
-  if (d.sweep && d.sweep.latency_hist) {
-    const h = d.sweep.latency_hist;
-    if (CHARTS['chart-lat']) CHARTS['chart-lat'].destroy();
-    makeBar('chart-lat', h.labels, h.counts, '#4ea1ff');
+  // Submission throughput (tx/s) — derived from attempts_5m
+  const tpsData = ticks.map(t => ({
+    x: t.ts, y: t.attempts_5m != null ? t.attempts_5m / 300 : null
+  }));
+  update('chart-tps', [{
+    label: 'tx/s', data: tpsData,
+    borderColor: '#2ecc71', backgroundColor: '#2ecc7133',
+    borderWidth: 1.5, pointRadius: 0, tension: 0.2,
+  }]);
+
+  // Failure breakdown per 5-min window
+  update('chart-fail', [
+    series('err_map_at',            '#e74c3c', 'map::at'),
+    series('err_insufficient_funds','#f5a623', 'insufficient funds'),
+    series('err_no_confirmed_utxos','#f1c40f', 'no confirmed utxos'),
+    series('err_rpc_other',         '#8ea0b5', 'other rpc'),
+  ]);
+
+  // Block weight — x-axis by blocktime (not tick time), filtered by horizon
+  const allBW = (d.sweep && d.sweep.block_weights) || [];
+  const bwFiltered = allBW.filter(b => b.t * 1000 >= cutoffMs && b.w != null);
+  update('chart-bw', [{
+    label: 'block weight (MWU)',
+    data: bwFiltered.map(b => ({ x: b.t * 1000, y: b.w / 1_000_000 })),
+    borderColor: '#b36bff', backgroundColor: '#b36bff33',
+    borderWidth: 1.2, pointRadius: 1.5, tension: 0,
+  }]);
+
+  // Latency histogram (horizon-scoped)
+  const binLabels = (d.sweep && d.sweep.bucket_bins) ||
+                    (d.sweep && d.sweep.latency_hist && d.sweep.latency_hist.labels) || [];
+  if (CHARTS['chart-lat']) CHARTS['chart-lat'].destroy();
+  makeBar('chart-lat', binLabels, hist, '#4ea1ff');
+  const label = getHorizonLabel(horizonMin);
+  document.getElementById('lat-title').textContent =
+    `Confirmation latency distribution (${label})`;
+
+  // Scope badges — update every horizon-scoped card
+  for (const id of ['scope-rate', 'scope-mp', 'scope-conf', 'scope-p50', 'scope-pend', 'scope-miss']) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = label;
   }
 }
+
+const HORIZON_LABELS = { 0: 'all', 60: '1h', 360: '6h', 720: '12h', 1440: '24h', 4320: '3d', 10080: '7d' };
+function getHorizonLabel(m) { return HORIZON_LABELS[m] || `${m}m`; }
 
 // Init empty charts
 makeLine('chart-height', [], {});
 makeLine('chart-rate',   [], { min: 0, max: 1.05 });
 makeLine('chart-att',    [], { beginAtZero: true });
+makeLine('chart-tps',    [], { beginAtZero: true });
+makeLine('chart-fail',   [], { beginAtZero: true });
 makeLine('chart-mp',     [], { beginAtZero: true });
 makeLine('chart-utxo',   [], { beginAtZero: true });
-makeLine('chart-err',    [], { beginAtZero: true });
+makeLine('chart-bw',     [], { beginAtZero: true });
 makeBar('chart-lat', [], [], '#4ea1ff');
 
-refresh();
-setInterval(refresh, 60000);
+const DATA = loadEmbedded();
+const _saved = parseInt(localStorage.getItem('btq-horizon'), 10);
+let horizon = Number.isFinite(_saved) ? _saved : 1440;
+function applyHorizon(m) {
+  horizon = m;
+  localStorage.setItem('btq-horizon', String(m));
+  document.querySelectorAll('#horizon button').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.h, 10) === m);
+  });
+  if (DATA) render(DATA, m);
+}
+document.querySelectorAll('#horizon button').forEach(b => {
+  b.addEventListener('click', () => applyHorizon(parseInt(b.dataset.h, 10)));
+});
+applyHorizon(horizon);
+
+// Help popovers — click ? on any card/section to toggle an explanation.
+document.querySelectorAll('.help-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const parent = btn.closest('.card, section');
+    const wasOpen = parent.classList.contains('help-open');
+    document.querySelectorAll('.help-open').forEach(p => p.classList.remove('help-open'));
+    if (!wasOpen) parent.classList.add('help-open');
+  });
+});
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.help-popover')) {
+    document.querySelectorAll('.help-open').forEach(p => p.classList.remove('help-open'));
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.help-open').forEach(p => p.classList.remove('help-open'));
+  }
+});
+
+// storage.cloud.google.com redirects to a signed *.apidata.googleusercontent.com
+// URL whose token expires (~1h). A same-URL reload would hit the expired token.
+// Always navigate back to the canonical storage.cloud.google.com URL so each
+// refresh re-auths and picks up a fresh signed URL + fresh HTML+data.
+const CANONICAL = 'https://storage.cloud.google.com/btq-testnet-stresstest-dashboard/index.html';
+const PAGE_LOADED_AT = Date.now();
+function goCanonical() {
+  window.location.replace(CANONICAL + '?t=' + Date.now());
+}
+// Normal refresh cadence: every 60s
+setInterval(goCanonical, 60000);
+// If tab was backgrounded long enough that the token might expire, refresh on
+// visibility change. Browsers throttle setInterval in hidden tabs.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && Date.now() - PAGE_LOADED_AT > 60000) goCanonical();
+});
+// Belt-and-suspenders: hard cap — always refresh before 45 min no matter what,
+// well inside the ~1h signed-URL lifetime.
+setTimeout(goCanonical, 45 * 60 * 1000);
 </script>
 </body>
 </html>

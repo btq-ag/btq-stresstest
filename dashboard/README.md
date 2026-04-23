@@ -9,7 +9,7 @@ Team-visible live view of stresstest health and on-chain confirmation stats.
 ## Layout
 
 - `index.html` — static dashboard (Chart.js, no build step). Served from the bucket.
-- `update_dashboard.py` — runs on the stresstest VM, reads `~/stresstest-health.jsonl` and the tx CSV, performs an incremental block sweep against the chain, writes `data.json`, uploads to the bucket.
+- `update_dashboard.py` — runs on the stresstest VM, reads `~/stresstest-health.jsonl` and every matching tx CSV (main at `/home/christam/btq-stresstest/stresstest_txlog.csv` plus any parallel instances at `/tmp/stresstest_w*/stresstest-w*_txlog.csv`), performs an incremental block sweep against the chain, writes `data.json`, uploads to the bucket. Per-tick `attempts_5m` / `success_*` / `failed_5m` / `success_rate_5m` are recomputed across all CSVs, so the dashboard reflects total load across every live stresstest wallet, not just main's.
 
 ## Architecture
 
