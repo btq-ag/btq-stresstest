@@ -67,7 +67,7 @@ gcloud compute ssh btq-testnet-stresstest --zone=asia-east1-a --project=btq-test
     "latency_p90":   <sec>,
     "latency_p99":   <sec>,
     "latency_max":   <sec>,
-    "latency_hist":  { "labels": [...], "counts": [...] },  // all-time aggregate
+    "latency_hist":  { "labels": [...], "counts": [...] },  // aggregate over retained confirmed submissions
     "buckets":       [ /* per-5-min-submission-window: {ts, conf, pend, miss, lat_hist[]} */ ],
     "bucket_bins":   [ "<30s", "30-60s", "1-2m", ... ],     // labels for per-bucket lat_hist
     "block_weights": [ /* per mined block: {h: height, t: blocktime, w: weight_wu} */ ],
